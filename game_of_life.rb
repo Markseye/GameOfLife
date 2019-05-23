@@ -1,22 +1,20 @@
-# Questions:
-# should cell know about grid? - if not how to handle neighbors?
-# add to ruby app or keep as standalone?
-# testing through Test::Unit assertions?
-
 # Initializes game with size of board
+# need to update to allow previous board to be passed in
 class GameOfLife
-  def initialize(grid_size = 28)
+  def initialize(grid_size = 8, number_of_turns = 100)
     @grid_size = grid_size
     @grid = prepare_game
+    @number_of_turns = number_of_turns
     run_game
   end
 
   def run_game
-    # will change as @grid change_state
-    # previous_grid << @grid
-    next_grid = @grid.next_turn
-    puts output_grid(next_grid)
-    GameOfLife.new(next_grid)
+    output_grid(@grid, 1)
+    (2..@number_of_turns).each do |n|
+      next_grid = @grid.next_turn
+      output_grid(next_grid, n)
+    end
+    # GameOfLife.new(next_grid)
   end
 
   private
@@ -25,8 +23,9 @@ class GameOfLife
     Grid.new(@grid_size)
   end
 
-  def output_grid(grid)
-    grid.each { |row| puts row.join(' ') }
+  def output_grid(grid, turn)
+    puts "\n\n-------TURN #{turn}--------\n\n"
+    grid.cells.each { |row| puts row.map(&:state).join(' ') }
   end
 end
 
@@ -35,83 +34,34 @@ class Grid
   attr_reader :size, :grid
 
   def initialize(size)
+    @grid = []
     @size = size
-    @grid = prepare_grid
+    @grid = create_grid_cells
   end
 
   def next_turn
     # need to handle previous cell state
-    @grid.flatten.map(&:process_state)
+    cells.flatten.each(&:process_state)
+    self
   end
 
-  def process_state
-    # only time dead state matter - dead to alive case
-    if surrounding_cell_count == 3 && @cell.state.zero?
-      @cell.flip_state
-    elsif @cell.state == 1
-      @cell.flip_state unless [2, 3].include?(surrounding_cell_count)
-    end
-  end
-
-  def surrounding_cell_count
-    row = @cell.row
-    column = @cell.column
-    # handle corners (only 3 neighbors)
-    # handle edges (5 neighbors)
-    # handle all others (8 neighbors)
-    # should be on grid or else cell would need to know about grid
-    # if i flatten this can i just work with grid size rather than grid[row][cell]
-
-    # can this be simplified?
-    if @cell.is_corner?
-      if row == 1
-        #extract @grid[row] , @grid[row + 1]
-        variant = column == 1 ? @grid[row + 1][column + 1] + @grid[row][column + 1] : @grid[row + 1][column - 1] + @grid[row][column - 1]
-        @grid[row + 1][column] + variant
-      else
-        variant = column == 1 ? @grid[row - 1][column + 1] + @grid[row][column + 1] : @grid[row - 1][column - 1] + @grid[row][column - 1]
-        @grid[row - 1][column]
-      end
-    elsif @cell.is_edge?
-      variant =
-        row == 1 ? bottom_corners_sum + @grid[row + 1][column] : top_corners_sum + @grid[row - 1][column]
-      variant + left_right_sum
-    else
-      above_below_sum + left_right_sum + top_corners_sum + bottom_corners_sum
-    end
+  def cells
+    @grid
   end
 
   private
 
-  def prepare_grid
-    create_grid_cells
-  end
-
   def create_grid_cells
+    grid = []
     @size.times do |row|
-      row_of_cells = []
+      column_of_cells = []
       @size.times do |column|
-        row_of_cells << Cell.new(row, column)
+        column_of_cells << Cell.new(self, row, column)
       end
 
-      @grid << row_of_cells
+      grid << column_of_cells
     end
-  end
-
-  def above_below_sum
-    @grid[row - 1][column] + @grid[row + 1][column]
-  end
-
-  def left_right_sum
-    @grid[column + 1][row] + @grid[column - 1][row]
-  end
-
-  def top_corners_sum
-    @grid[row - 1][column - 1] + @grid[row - 1][column + 1]
-  end
-
-  def bottom_corners_sum
-    @grid[row + 1][column - 1] + @grid[row + 1][column + 1]
+    grid
   end
 end
 
@@ -120,12 +70,55 @@ class Cell
   STATES = { DEAD: 0, ALIVE: 1 }.freeze
 
   attr_accessor :state
-  attr_accessor :surrounding_cell_count
+  attr_reader :row, :column
+  # attr_accessor :surrounding_cell_count
 
-  def initialize(row, column)
+  def initialize(grid, row, column)
+    @grid = grid
     @state = generate_random_state
     @row = row
     @column = column
+  end
+
+  def surrounding_cell_count
+    # handle corners (only 3 neighbors)
+    # handle edges (5 neighbors)
+    # handle all others (8 neighbors)
+    # should be on grid or else cell would need to know about grid
+    # can this be simplified?
+    # create single methods where you pass in your row and column and it returns state the state of that cell
+    if corner?(@grid.size)
+      if row == 0
+        #extract @grid[row] , @grid[row + 1]
+        variant = column == 0 ? @grid.cells[row + 1][column + 1].state + @grid.cells[row][column + 1].state : @grid.cells[row + 1][column - 1].state + @grid.cells[row][column - 1].state
+        @grid.cells[row + 1][column].state + variant
+      else
+        variant = column == 0 ? @grid.cells[row - 1][column + 1].state + @grid.cells[row][column + 1].state  : @grid.cells[row - 1][column - 1].state  + @grid.cells[row][column - 1].state
+        @grid.cells[row - 1][column]
+      end
+    elsif edge?(@grid.size)
+      if column == 0 
+        @grid.cells[row + 1][column + 1].state + @grid.cells[row - 1][column + 1].state + @grid.cells[row][column + 1].state
+      elsif column == @grid.size - 1
+        @grid.cells[row + 1][column - 1].state + @grid.cells[row - 1][column - 1].state + @grid.cells[row][column - 1].state
+      elsif row == 0
+        @grid.cells[row + 1][column - 1].state + @grid.cells[row + 1][column + 1].state + @grid.cells[row + 1][column].state
+      else
+        @grid.cells[row - 1][column - 1].state + @grid.cells[row - 1][column + 1].state + @grid.cells[row - 1][column].state
+      end
+    else
+      above_below_sum + left_right_sum + top_corners_sum + bottom_corners_sum
+    end
+  end
+
+  def process_state
+    # only time dead state matter - dead to alive case
+    if surrounding_cell_count == 3 && state.zero?
+      flip_state!
+    elsif state == 1
+      flip_state! unless [2, 3].include?(surrounding_cell_count)
+    end
+    self
   end
 
   def action
@@ -138,24 +131,21 @@ class Cell
   end
 
   def corner?(grid_size)
-    (row == 1 || row == grid_size) &&
-      (column == 1 || column == grid_size)
+    (row == 0|| row == grid_size - 1) &&
+      (column == 0 || column == grid_size - 1)
   end
 
   def edge?(grid_size)
-    row == 1 ||
-      row == grid_size ||
-      column == 1 ||
-      column == grid_size
+    row == 0 ||
+      row == grid_size - 1 ||
+      column == 0 ||
+      column == grid_size - 1
   end
 
   private
 
   def flip_state!
-    state = !state
-    save
-    # exception if save fails
-    state
+    !state
   end
 
   def kill?
@@ -170,6 +160,22 @@ class Cell
     return true if surround_cell_count == 3
 
     false
+  end
+
+  def above_below_sum
+    @grid.cells[row - 1][column].state + @grid.cells[row + 1][column].state
+  end
+
+  def left_right_sum
+    @grid.cells[column + 1][row].state + @grid.cells[column - 1][row].state
+  end
+
+  def top_corners_sum
+    @grid.cells[row - 1][column - 1].state + @grid.cells[row - 1][column + 1].state
+  end
+
+  def bottom_corners_sum
+    @grid.cells[row + 1][column - 1].state + @grid.cells[row + 1][column + 1].state
   end
 end
 
