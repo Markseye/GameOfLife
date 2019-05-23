@@ -25,7 +25,7 @@ class GameOfLife
 
   def output_grid(grid, turn)
     puts "\n\n-------TURN #{turn}--------\n\n"
-    grid.cells.each { |row| puts row.map(&:state).join(' ') }
+    grid.grid.each { |row| puts row.map(&:state).join(' ') }
   end
 end
 
@@ -41,12 +41,8 @@ class Grid
 
   def next_turn
     # need to handle previous cell state
-    cells.flatten.each(&:process_state)
+    grid.flatten.each(&:process_state)
     self
-  end
-
-  def cells
-    @grid
   end
 
   private
@@ -90,21 +86,21 @@ class Cell
     if corner?(@grid.size)
       if row == 0
         #extract @grid[row] , @grid[row + 1]
-        variant = column == 0 ? @grid.cells[row + 1][column + 1].state + @grid.cells[row][column + 1].state : @grid.cells[row + 1][column - 1].state + @grid.cells[row][column - 1].state
-        @grid.cells[row + 1][column].state + variant
+        variant = column == 0 ? @grid.grid[row + 1][column + 1].state + @grid.grid[row][column + 1].state : @grid.grid[row + 1][column - 1].state + @grid.grid[row][column - 1].state
+        @grid.grid[row + 1][column].state + variant
       else
-        variant = column == 0 ? @grid.cells[row - 1][column + 1].state + @grid.cells[row][column + 1].state  : @grid.cells[row - 1][column - 1].state  + @grid.cells[row][column - 1].state
-        @grid.cells[row - 1][column]
+        variant = column == 0 ? @grid.grid[row - 1][column + 1].state + @grid.grid[row][column + 1].state  : @grid.grid[row - 1][column - 1].state  + @grid.grid[row][column - 1].state
+        @grid.grid[row - 1][column]
       end
     elsif edge?(@grid.size)
       if column == 0 
-        @grid.cells[row + 1][column + 1].state + @grid.cells[row - 1][column + 1].state + @grid.cells[row][column + 1].state
+        @grid.grid[row + 1][column + 1].state + @grid.grid[row - 1][column + 1].state + @grid.grid[row][column + 1].state
       elsif column == @grid.size - 1
-        @grid.cells[row + 1][column - 1].state + @grid.cells[row - 1][column - 1].state + @grid.cells[row][column - 1].state
+        @grid.grid[row + 1][column - 1].state + @grid.grid[row - 1][column - 1].state + @grid.grid[row][column - 1].state
       elsif row == 0
-        @grid.cells[row + 1][column - 1].state + @grid.cells[row + 1][column + 1].state + @grid.cells[row + 1][column].state
+        @grid.grid[row + 1][column - 1].state + @grid.grid[row + 1][column + 1].state + @grid.grid[row + 1][column].state
       else
-        @grid.cells[row - 1][column - 1].state + @grid.cells[row - 1][column + 1].state + @grid.cells[row - 1][column].state
+        @grid.grid[row - 1][column - 1].state + @grid.grid[row - 1][column + 1].state + @grid.grid[row - 1][column].state
       end
     else
       above_below_sum + left_right_sum + top_corners_sum + bottom_corners_sum
@@ -163,19 +159,19 @@ class Cell
   end
 
   def above_below_sum
-    @grid.cells[row - 1][column].state + @grid.cells[row + 1][column].state
+    @grid.grid[row - 1][column].state + @grid.grid[row + 1][column].state
   end
 
   def left_right_sum
-    @grid.cells[column + 1][row].state + @grid.cells[column - 1][row].state
+    @grid.grid[column + 1][row].state + @grid.grid[column - 1][row].state
   end
 
   def top_corners_sum
-    @grid.cells[row - 1][column - 1].state + @grid.cells[row - 1][column + 1].state
+    @grid.grid[row - 1][column - 1].state + @grid.grid[row - 1][column + 1].state
   end
 
   def bottom_corners_sum
-    @grid.cells[row + 1][column - 1].state + @grid.cells[row + 1][column + 1].state
+    @grid.grid[row + 1][column - 1].state + @grid.grid[row + 1][column + 1].state
   end
 end
 
