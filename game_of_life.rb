@@ -153,9 +153,7 @@ class Cell
   end
 
   def live?
-    return true if surround_cell_count == 3
-
-    false
+    surround_cell_count == 3
   end
 
   def above_below_sum
